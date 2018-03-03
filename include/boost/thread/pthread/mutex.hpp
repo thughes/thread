@@ -85,7 +85,7 @@ namespace boost
 #endif
 
   }
-    class BOOST_THREAD_CAPABILITY("mutex") mutex
+    class BOOST_THREAD_LOCKABLE mutex
     {
     private:
         pthread_mutex_t m;
@@ -107,7 +107,7 @@ namespace boost
           BOOST_ASSERT(!res);
         }
 
-        void lock() BOOST_THREAD_ACQUIRE()
+        void lock() BOOST_THREAD_EXCLUSIVE_LOCK_FUNCTION()
         {
             int res = posix::pthread_mutex_lock(&m);
             if (res)
@@ -116,7 +116,7 @@ namespace boost
             }
         }
 
-        void unlock() BOOST_THREAD_RELEASE()
+        void unlock() BOOST_THREAD_UNLOCK_FUNCTION()
         {
             int res = posix::pthread_mutex_unlock(&m);
             (void)res;
@@ -127,7 +127,7 @@ namespace boost
 //            }
         }
 
-        bool try_lock() BOOST_THREAD_TRY_ACQUIRE(true)
+        bool try_lock() BOOST_THREAD_EXCLUSIVE_TRYLOCK_FUNCTION(true)
         {
             int res;
             do

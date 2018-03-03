@@ -3,6 +3,10 @@
 
 // See https://clang.llvm.org/docs/ThreadSafetyAnalysis.html
 
+// Using lock-style attributes so that try_lock analysis works correctly
+// https://bugs.llvm.org/show_bug.cgi?id=32954
+#define USE_LOCK_STYLE_THREAD_SAFETY_ATTRIBUTES 1
+
 // Enable thread safety attributes only with clang.
 // The attributes can be safely erased when compiling with other compilers.
 #if defined(__clang__) && (!defined(SWIG))
