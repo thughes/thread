@@ -28,11 +28,12 @@
 boost::mutex m;
 
 #if defined BOOST_THREAD_USES_CHRONO
-typedef boost::chrono::system_clock Clock;
+typedef boost::chrono::high_resolution_clock Clock;
 typedef Clock::time_point time_point;
 typedef Clock::duration duration;
 typedef boost::chrono::milliseconds ms;
 typedef boost::chrono::nanoseconds ns;
+time_point t1;
 #else
 #endif
 
@@ -45,7 +46,6 @@ const ms max_diff(75);
 void f()
 {
 #if defined BOOST_THREAD_USES_CHRONO
-  time_point t0 = Clock::now();
   {
     boost::unique_lock<boost::mutex> lk(m, boost::try_to_lock);
     BOOST_TEST(lk.owns_lock() == false);
@@ -61,14 +61,12 @@ void f()
   for (;;)
   {
     boost::unique_lock<boost::mutex> lk(m, boost::try_to_lock);
-    if (lk.owns_lock()) break;
+    if (lk.owns_lock())
+    {
+      t1 = Clock::now();
+      break;
+    }
   }
-  time_point t1 = Clock::now();
-  //m.unlock();
-  ns d = t1 - t0 - ms(250);
-  std::cout << "diff= " << d.count() << std::endl;
-  std::cout << "max_diff= " << max_diff.count() << std::endl;
-  BOOST_TEST(d < max_diff);
 #else
 //  time_point t0 = Clock::now();
 //  {
@@ -100,10 +98,18 @@ int main()
   boost::thread t(f);
 #if defined BOOST_THREAD_USES_CHRONO
   boost::this_thread::sleep_for(ms(250));
+  time_point t0 = Clock::now();
 #else
 #endif
   m.unlock();
   t.join();
+
+#if defined BOOST_THREAD_USES_CHRONO
+  ns d = t1 - t0;
+  std::cout << "d= " << d.count() << std::endl;
+  BOOST_TEST(d >= ns(0));
+  BOOST_TEST(d < max_diff);
+#endif
 
   return boost::report_errors();
 }
