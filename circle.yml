@@ -2,27 +2,28 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See accompanying file LICENSE_1_0.txt or copy at http://boost.org/LICENSE_1_0.txt)
 
-linux_build: &linux_build
-  docker:
-    - image: circleci/buildpack-deps:trusty
+build_steps: &build_steps
   steps:
     - run:
         name: Setup
         command: |
-          sudo apt-get install -y software-properties-common apt-transport-https
+          PLATFORM=`uname`
+          if [ "${PLATFORM}" == "Linux" ]; then
+            sudo apt-get install -y software-properties-common apt-transport-https
 
-          # https://github.com/ilikenwf/apt-fast
-          sudo add-apt-repository -y ppa:apt-fast/stable
-          sudo apt-get update
-          sudo apt-get -y install apt-fast
+            # https://github.com/ilikenwf/apt-fast
+            sudo add-apt-repository -y ppa:apt-fast/stable
+            sudo apt-get update
+            sudo apt-get -y install apt-fast
 
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-          echo "deb https://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main" | sudo tee -a /etc/apt/sources.list
-          echo "deb https://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main" | sudo tee -a /etc/apt/sources.list
-          echo "deb https://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main" | sudo tee -a /etc/apt/sources.list
-          sudo apt-fast update
-          sudo apt-fast install -y $COMPILER
+            sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+            wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+            echo "deb https://apt.llvm.org/trusty/ llvm-toolchain-trusty-4.0 main" | sudo tee -a /etc/apt/sources.list
+            echo "deb https://apt.llvm.org/trusty/ llvm-toolchain-trusty-5.0 main" | sudo tee -a /etc/apt/sources.list
+            echo "deb https://apt.llvm.org/trusty/ llvm-toolchain-trusty-6.0 main" | sudo tee -a /etc/apt/sources.list
+            sudo apt-fast update
+            sudo apt-fast install -y $COMPILER
+          fi
     - checkout
     - run:
         name: Install
@@ -45,6 +46,17 @@ linux_build: &linux_build
           echo "using $TOOLSET : : $COMPILER : <cxxflags>-std=$CXXSTD ;" > ~/user-config.jam
           cd ../boost-root
           ./b2 -j10 libs/thread/test toolset=$TOOLSET
+
+mac_build: &mac_build
+  macos:
+    xcode: "9.2.0"
+  <<: *build_steps
+
+linux_build: &linux_build
+  docker:
+    - image: circleci/buildpack-deps:trusty
+  <<: *build_steps
+
 
 version: 2
 jobs:
@@ -111,6 +123,34 @@ jobs:
       - COMPILER: "clang++-4.0"
       - CXXSTD: "c++1z"
 
+  mac-clang++-c++98:
+    <<: *mac_build
+    environment:
+      - TOOLSET: "clang"
+      - COMPILER: "clang++"
+      - CXXSTD: "c++98"
+
+  mac-clang++-c++11:
+    <<: *mac_build
+    environment:
+      - TOOLSET: "clang"
+      - COMPILER: "clang++"
+      - CXXSTD: "c++11"
+
+  mac-clang++-c++14:
+    <<: *mac_build
+    environment:
+      - TOOLSET: "clang"
+      - COMPILER: "clang++"
+      - CXXSTD: "c++14"
+
+  mac-clang++-c++1z:
+    <<: *mac_build
+    environment:
+      - TOOLSET: "clang"
+      - COMPILER: "clang++"
+      - CXXSTD: "c++1z"
+
 workflows:
   version: 2
   continous:
@@ -124,4 +164,8 @@ workflows:
       - linux-clang++-4.0-c++11
       - linux-clang++-4.0-c++14
       - linux-clang++-4.0-c++1z
+      - mac-clang++-c++98
+      - mac-clang++-c++11
+      - mac-clang++-c++14
+      - mac-clang++-c++1z
 
